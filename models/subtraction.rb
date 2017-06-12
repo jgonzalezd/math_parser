@@ -1,0 +1,2 @@
+class Subtraction < Expression
+end
