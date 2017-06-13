@@ -72,6 +72,12 @@ describe String do
         expected_output = div('x', -25)
         expect(input.objectify).to eq expected_output
       end
+
+      it 'objectifies \frac{a}{d}{8+x}' do
+        input = '\frac{a}{d}{8+x}'
+        expected_output = mtp(div('a', 'd'), add(8, 'x'))
+        expect(input.objectify).to eq expected_output
+      end
     end
 
     context 'mixed stack lvl 2' do
@@ -162,6 +168,148 @@ describe String do
         expected_output = pow(add(mtp(3,add('x',div(add(mtp(3,div(3,'x')),5),
           add(4,5,'a')))),4),mtp(2,add('x',div(3,'y')),'w'))
         expect(input.objectify).to eq expected_output
+      end
+    end
+
+    context 'Error handling' do
+      describe 'syntax errors' do
+        it 'raises error for 4$5' do
+          input = '4$5'
+          expect{input.objectify}
+          .to raise_error(Parser::ParserError)
+          .with_message(/Invalid character \$/)
+        end
+
+        it 'raises error for \frac{7&8}{-25}' do
+          input = '\frac{8&8}{-25}'
+          expect{input.objectify}
+          .to raise_error(Parser::ParserError)
+          .with_message(/Invalid character \&/)
+        end
+
+        it 'raises error for \fract{-14}{25}' do
+          input = '\fract{-14}{25}'
+          expect{input.objectify}
+          .to raise_error(Parser::ParserError)
+          .with_message(/Invalid character/)
+        end
+      end
+
+      describe 'missing values' do
+        context 'division' do
+          it 'raises error for \frac{}{-25}' do
+            input = '\frac{}{-25}'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing.*\\frac\{\}\{-25\}/)
+          end
+          it 'raises error for {2+x}/()' do
+            input = '{2+x}/()'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+        end
+
+        context 'multiplication' do
+          it 'raises error for 6()' do
+            input = '6()'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+          it 'raises error for 6*()' do
+            input = '6*()'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+        end
+
+        context 'power' do
+          it 'raises error for ^(2x)' do
+            input = '^(2x)'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+          it 'raises error for (5+x)^' do
+            input = '(5+x)^'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+        end
+
+        context 'addition' do
+          it 'raises error for 6+' do
+            input = '6+'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+          it 'raises error for (2x+10)+' do
+            input = '(2x+10)+'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+          it 'does not raises error for (+10)*2' do
+            input = '(+10)*2'
+            expect(input.objectify)
+            .to eq mtp(10,2)
+          end
+
+          it 'does not raises error for +10*2' do
+            input = '+10*2'
+            expect(input.objectify)
+            .to eq mtp(10,2)
+          end
+
+          it 'does not raises error for +6' do
+            input = '+6'
+            expect(input.objectify).to eq 6
+          end
+
+        end
+
+        context 'substraction' do
+          it 'raises error for 6-' do
+            input = '6-'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+          it 'raises error for (2x+10)-' do
+            input = '(2x+10)-'
+            expect{input.objectify}
+            .to raise_error(ExpressionComposer::AssigmentError)
+            # .with_message(/Missing/)
+          end
+
+          it 'does not raises error for -6' do
+            input = '-6'
+            expect(input.objectify).to eq -6
+          end
+
+          it 'does not raises error for -10*2' do
+            input = '-10*2'
+            expect(input.objectify)
+            .to eq mtp(-10,2)
+          end
+
+          it 'does not raises error for (-10)*2' do
+            input = '(-10)*2'
+            expect(input.objectify)
+            .to eq mtp(-10,2)
+          end
+        end
       end
     end
   end

@@ -7,15 +7,9 @@ module Factory
   end
 
   def sbt(*args)
-    # byebug
-
-    first, remaining = args
-
-    new_args = [remaining] unless remaining.is_a?(Array)
-    new_args = new_args.map do |el|
-      el.to_s.is_numeric? ? -el : mtp(-1, el)
-    end
-
+    first, *remaining = args.flatten
+    new_args = remaining.is_a?(Array) ? remaining : [remaining]
+    new_args = new_args.map { |el| el.to_s.is_numeric? ? -el : mtp(-1, el) }
     Addition.new(first, *new_args)
   end
 
@@ -35,17 +29,15 @@ module Factory
   private
 
   [:multiplication, :addition].each do |op|
+    op_class = Object.const_get(op.capitalize)
+    allowed_classes = [Fixnum, Float, String, op_class]
     method_name = "args_for_#{op}"
     define_method method_name do |args|
-      return args unless args.all? do |el|
-        [Fixnum, Float, String, Object.const_get(op.capitalize)].include? el.class
-      end
+      return args unless args.all? { |el| allowed_classes.include? el.class }
       args.inject([]) do |memo, el|
-        if el.class == Object.const_get(op.capitalize)
-          memo.concat self.send(method_name, el.args)
-        else
-          memo << el
-        end
+        # Search for nested args of the same class recursively
+        # from add(a,add(b,add(c,d))) to [a, b, c, d]
+        memo.concat (el.class == op_class ? self.send(method_name, el.args) : [el])
       end
     end
   end

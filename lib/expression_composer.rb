@@ -11,6 +11,7 @@ class ExpressionComposer
 
   def compose
     traverse do |operation, left, right, stack|
+      raise AssigmentError if left.nil?
       case operation
       when :uminus then left.to_s.is_numeric? ? -left : mtp(-1, left)
       when :sqrt   then pow(left, 1.0/right)
@@ -36,12 +37,6 @@ private
     postfix_notation.each do |node|
       case node
       when Symbol
-        # if node == :uminus
-        #   operation, right, left = node, nil, simplest_negative(stack)
-        # else
-        #   operation, right, left = node, stack.pop, stack.pop
-        # end
-
         operation, right, left = node, (node == :uminus ? nil : stack.pop), stack.pop
         stack.push(yield(operation,left, right, stack))
       when Numeric
@@ -52,13 +47,5 @@ private
     end
     stack.first
   end
-
-
-  # def simplest_negative(stack)
-  #   available = stack.each_with_index.select do |el|
-  #     is_number? el[0]
-  #   end
-  #   stack.delete_at available.first[1]
-  # end
-
+  class AssigmentError < StandardError; end
 end

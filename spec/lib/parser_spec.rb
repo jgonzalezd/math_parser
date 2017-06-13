@@ -28,6 +28,8 @@ describe Parser do
       end
 
       it 'parses 3^23' do
+        #this is intended as LaTeX
+        # interprets the string in the same way.
         expect(Parser.new('3^23').parse)
         .to eq [3,2,:exp,3,:mul]
       end
@@ -83,6 +85,11 @@ describe Parser do
       it 'objectifies (2x)^{34}' do
         expect(Parser.new("(2x)^{34}").parse)
         .to eq [2,'x', :mul, 34,:exp]
+      end
+
+      it 'objectifies \frac{a}{d}{8+x}' do
+        expect(Parser.new('\frac{a}{d}{8+x}').parse)
+        .to eq ['a', 'd', :div, 8, 'x', :plus, :mul]
       end
     end
 
@@ -220,7 +227,27 @@ describe Parser do
     end
 
     context 'handles floats' do
-      it 'do simple arithmetic'
+      describe 'do simple arithmetic' do
+        it 'parses -1.5 + a' do
+          expect(Parser.new('-1.5 + a').parse)
+          .to eq [1.5, :uminus ,'a', :plus]
+        end
+
+        it 'parses 3.8 + 2.0 + 1.82 + 0.0005' do
+          expect(Parser.new("3.8 + 2.0 + 1.82 + 0.0005").parse)
+          .to eq [3.8, 2.0, :plus, 1.82, :plus, 0.0005, :plus]
+        end
+
+        it 'parses 3.5-2.3-6.9999+10.1245789' do
+          expect(Parser.new("3.5-2.3-6.9999+10.1245789").parse)
+          .to eq [3.5, 2.3, :minus, 6.9999, :minus, 10.1245789, :plus]
+        end
+
+        it 'parses 3^2' do
+          expect(Parser.new("3.0009^2.11125").parse)
+          .to eq [3.0009, 2.11125, :exp]
+        end
+      end
     end
 
   end

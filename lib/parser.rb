@@ -63,9 +63,6 @@ class Parser < StringScanner
     token = :none
     while true
       prev, token = token, fetch_token
-      # p "parse init exp #{exp}"
-      # p "parse init stack #{stack}"
-      # p "parse init token #{token}"
       case token
       when :open
         stack.push(token)
@@ -73,6 +70,7 @@ class Parser < StringScanner
         exp << stack.pop while operators.keys.include?(stack.last)
         stack.pop if stack.last == :open
       when :plus, :minus, :mul, :div, :exp, :sqrt, :eql
+        next            if prev && (prev == :none || prev == :open)  && token == :plus
         token = :uminus if prev && (prev == :none || prev != :close) && token == :minus
         exp << stack.pop while operators.keys.include?(stack.last) && operators[stack.last] >= operators[token]
         stack.push(token)
@@ -84,14 +82,8 @@ class Parser < StringScanner
       else
         raise ArgumentError, "Unexpected symbol: #{token.inspect}"
       end
-      # p "parse exp #{exp}"
-      # p "parse stack #{stack}"
-      # p "parse token #{token}"
     end
     exp << stack.pop while stack.last && stack.last != :open
-    # p "parse final exp #{exp}"
-    # p "parse final stack #{stack}"
-    # p "parse final token #{token}"
     raise ArgumentError, "Missing closing parentheses: #{stack.join(', ')}" unless stack.empty?
     exp
   end
@@ -109,29 +101,28 @@ class Parser < StringScanner
     scanning = true
     while(scanning)
       scanning = false
-      # p "fetch_token init pos #{pos}"
-      # p "fetch_token init string #{string}"
       token = case
               when scan(/=/)
                 :eql
               when scan(LATEX_MULT)
                 :mul
               when scan(LATEX_DIV)
+                string.insert(pos, "*") if should_insert_mult?(matched)
                 num, denom = [self[1], self[2]].map{|v| v.gsub(/^{|}$/, '')}
                 string[pos, 0] = "{(#{num}) / (#{denom})}"
                 scanning = true
-              when scan(/\//)
+              when scan(DIV_OP)
                 :div
-              when scan(/\+/)
+              when scan(PLUS_OP)
                 :plus
-              when scan(/\^/)
+              when scan(POWER_OP)
                 string.insert(pos+1,"*") if /^\d+{2}/ =~ string[pos..pos+1]
                 :exp
-              when scan(/-/)
+              when scan(SUBTR_OP)
                 :minus
-              when scan(/sqrt/)
+              when scan(SQRT_OP)
                 :sqrt
-              when scan(LATEX_EXP)
+              when scan(LATEX_SQRT)
                 deg = (self[1] || "2").gsub(/^\[|\]$/, '')
                 rad = self[2].gsub(/^{|}$/, '')
                 string[pos, 0] = "(#{rad}) sqrt (#{deg}) "
@@ -159,17 +150,26 @@ class Parser < StringScanner
                 end
               else
                 error_msg = "Invalid character #{string[pos]} at position #{pos} near '#{peek(20)}'."
-                p error_msg
                 raise ParserError, error_msg
               end
-      # p "fetch_token token endwhile #{token}"
     end#while
-    # p "fetch_token token enddef #{token}"
     return token
   end#def
 
   private
 
+  # Replaces strings like "ajyxb2c" by a*j*y*x*b*2*c
+  def replace(matched)
+    vars = matched.split('')
+    replacement = ""
+    match_start_pos = pos - matched.size
+    replacement << "*" if should_insert_mult?(matched)
+    replacement << implicit_mult(vars)
+    string[match_start_pos,matched.size] = replacement
+    self.pos = match_start_pos
+  end
+
+  #generates a string like "a*j*y*x*b*2*c" from "ajyxb2c"
   def implicit_mult(elements)
     elements.inject("") do |memo, el|
       if (/[0-9|-]/ =~ el) && (/[0-9|-]/ =~ memo[-1])
@@ -180,16 +180,7 @@ class Parser < StringScanner
     end
   end
 
-  def replace(matched)
-    vars = matched.split('')
-    replacement = ""
-    match_start_pos = pos - matched.size
-    replacement << "*" if (match_start_pos > 0) && (/[0-9\)]/ =~ string[match_start_pos - 1])
-    replacement << implicit_mult(vars)
-    string[match_start_pos,matched.size] = replacement
-    self.pos = match_start_pos
-  end
-
+  #Decides wheather a mult. char "*" should be placed in the string or not
   def should_insert_mult?(matched)
     match_start_pos = pos - matched.size
 
@@ -211,4 +202,5 @@ class Parser < StringScanner
     false
   end
 
+  class ParserError < StandardError; end
 end#class
