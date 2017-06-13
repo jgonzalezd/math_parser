@@ -70,7 +70,9 @@ class Parser < StringScanner
         exp << stack.pop while operators.keys.include?(stack.last)
         stack.pop if stack.last == :open
       when :plus, :minus, :mul, :div, :exp, :sqrt, :eql
+        #Dont include plus token ('+') if is a unary operator like +10
         next            if prev && (prev == :none || prev == :open)  && token == :plus
+        #Transform minus token ('-') to unitary minus if is a unary operator like -10
         token = :uminus if prev && (prev == :none || prev != :close) && token == :minus
         exp << stack.pop while operators.keys.include?(stack.last) && operators[stack.last] >= operators[token]
         stack.push(token)

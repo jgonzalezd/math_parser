@@ -312,5 +312,14 @@ describe String do
         end
       end
     end
+
+    context 'Can handle whitespaces' do
+      it 'objectifies \frac{ 21a + 3 } { 4 - (2(x + \frac{3}{y})w + d) }' do
+        input = '\frac{ 21a + 3 } { 4 - (2(x + \frac{3}{y})w + d) }'
+        expected_output = div(add(mtp(21,'a'),3),add(4,mtp(-1,
+          add(mtp(2,add('x',div(3,'y')),'w'),'d'))))
+        expect(input.objectify).to eq expected_output
+      end
+    end
   end
 end
