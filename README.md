@@ -1,4 +1,4 @@
-# Objectify Tech Test
+Math Parser
 
 ### Description
 In order to make your team more efficient in writing well-tested code, you have been tasked to develop an **extremely important** utility that converts a string which is the LaTeX syntax for a mathematical expression into the relevant Ruby objects.  It is estimated this utility method improves overall code writing productivity by 5-10%!
